@@ -1,0 +1,46 @@
+{
+  "shows": [
+    {
+      "name": "Café da Manhã",
+      "show_id": "6WRTzGhq3uFxMrxHrHh1lo"
+    },
+    {
+      "name": "O Assunto",
+      "show_id": "4gkKyFdZzkv1eDnlTVrguk"
+    },
+    {
+      "name": "Resumão Diario",
+      "show_id": "7fzhxpt0RgWaLFYydsv2b4"
+    },
+    {
+      "name": "FIAP",
+      "show_id": "1wQ8NSEiIuQsdUb6QfgDhk"
+    },
+    {
+      "name": "Compilado do Codigo Fonte TV",
+      "show_id": "7kLgm2CDG4aontuQOluFwb"
+    },
+    {
+      "name": "IA Sob Controle - Inteligência Artificial",
+      "show_id": "5xLCMHJ6eGWzdu8JaIDkuP"
+    },
+    {
+      "name": "Data Hackers",
+      "show_id": "1oMIHOXsrLFENAeM743g93"
+    },
+    {
+      "name": "Hipster Ponto Tech",
+      "show_id": "2p0Vx75OmfsXktyLBuLuSf"
+    },
+    {
+      "name": "Scicast",
+      "show_id": "0qfFcilKpNKkXy8TbZ4moP"
+    },
+    {
+      "name": "Nerdcast",
+      "show_id": "22Wgt4ASeaw8mmoqAWNUn1"
+    }
+    
+    
+  ]
+}
