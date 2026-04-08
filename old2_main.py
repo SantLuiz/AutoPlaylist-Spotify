@@ -14,7 +14,6 @@ STATE_FILE = Path("state.json")
 PODCASTS_FILE = Path("podcasts.json")
 MAX_EPISODE_AGE_DAYS = 14
 SHOW_EPISODE_FETCH_LIMIT = 20
-PLAYLIST_FETCH_LIMIT = 100
 
 SCOPES = [
     "playlist-read-private",
@@ -45,7 +44,6 @@ def validate_env() -> None:
         raise RuntimeError(f"Missing environment variables: {', '.join(missing)}")
 
 
-
 def load_state() -> Dict[str, List[str]]:
     if not STATE_FILE.exists():
         return {"processed_episode_ids": []}
@@ -70,11 +68,9 @@ def load_state() -> Dict[str, List[str]]:
         return {"processed_episode_ids": []}
 
 
-
 def save_state(state: Dict[str, List[str]]) -> None:
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2, ensure_ascii=False)
-
 
 
 def load_podcasts() -> List[Dict[str, str]]:
@@ -88,7 +84,7 @@ def load_podcasts() -> List[Dict[str, str]]:
     if not isinstance(shows, list) or not shows:
         raise ValueError("No valid shows found in podcasts.json")
 
-    valid_shows: List[Dict[str, str]] = []
+    valid_shows = []
     for show in shows:
         if not isinstance(show, dict):
             print(f"Skipping invalid show entry: {show}")
@@ -109,7 +105,6 @@ def load_podcasts() -> List[Dict[str, str]]:
     return valid_shows
 
 
-
 def create_spotify_client() -> spotipy.Spotify:
     auth_manager = SpotifyOAuth(
         client_id=CLIENT_ID,
@@ -121,7 +116,6 @@ def create_spotify_client() -> spotipy.Spotify:
         show_dialog=True,
     )
     return spotipy.Spotify(auth_manager=auth_manager)
-
 
 
 def parse_release_date(value: str, precision: str = "day") -> Optional[date]:
@@ -144,42 +138,18 @@ def parse_release_date(value: str, precision: str = "day") -> Optional[date]:
         return None
 
 
-
 def is_recent_episode(release_date: Optional[date], max_age_days: int = MAX_EPISODE_AGE_DAYS) -> bool:
     if release_date is None:
         return False
     return release_date >= (date.today() - timedelta(days=max_age_days))
 
 
-
-def is_episode_object(obj: Dict[str, Any]) -> bool:
-    uri = obj.get("uri") or ""
-    obj_type = obj.get("type") or ""
-    return obj_type == "episode" or str(uri).startswith("spotify:episode:")
-
-
-
-def is_episode_fully_played(obj: Dict[str, Any]) -> bool:
-    resume_point = obj.get("resume_point") or {}
+def is_episode_fully_played(episode: Dict[str, Any]) -> bool:
+    resume_point = episode.get("resume_point") or {}
     return bool(resume_point.get("fully_played", False))
 
 
-
-def get_episode_details(sp: spotipy.Spotify, episode_id: str) -> Optional[Dict[str, Any]]:
-    try:
-        data = sp.episode(episode_id, market="BR")
-        return data if isinstance(data, dict) else None
-    except Exception as exc:
-        print(f"  Warning: failed to fetch episode details for {episode_id}: {exc}")
-        return None
-
-
-
-def get_latest_episodes(
-    sp: spotipy.Spotify,
-    show_id: str,
-    limit: int = SHOW_EPISODE_FETCH_LIMIT,
-) -> List[Dict[str, Any]]:
+def get_latest_episodes(sp: spotipy.Spotify, show_id: str, limit: int = SHOW_EPISODE_FETCH_LIMIT) -> List[Dict[str, Any]]:
     results = sp.show_episodes(show_id, limit=limit, market="BR")
     items = results.get("items", [])
 
@@ -189,66 +159,49 @@ def get_latest_episodes(
 
     valid_items: List[Dict[str, Any]] = []
     for item in items:
-        if isinstance(item, dict) and is_episode_object(item):
+        if isinstance(item, dict):
             valid_items.append(item)
     return valid_items
-
 
 
 def get_playlist_episode_items(sp: spotipy.Spotify, playlist_id: str) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     offset = 0
+    limit = 100
 
     while True:
         response = sp.playlist_items(
             playlist_id,
-            limit=PLAYLIST_FETCH_LIMIT,
+            limit=limit,
             offset=offset,
             market="BR",
-            additional_types="track,episode",
+            additional_types=("track", "episode"),
         )
-
         page_items = response.get("items", [])
         if not isinstance(page_items, list):
             break
 
         items.extend(page_items)
 
-        if len(page_items) < PLAYLIST_FETCH_LIMIT:
+        if len(page_items) < limit:
             break
-        offset += PLAYLIST_FETCH_LIMIT
+        offset += limit
 
     return items
 
 
-
-def extract_track_from_playlist_item(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    if not isinstance(item, dict):
-        return None
-
-    track = item.get("track")
-    if isinstance(track, dict):
-        return track
-
-    episode = item.get("episode")
-    if isinstance(episode, dict):
-        return episode
-
-    return None
-
-
-
-def inspect_playlist_episodes(
-    sp: spotipy.Spotify,
+def extract_playlist_episode_ids_and_finished_uris(
     playlist_items: List[Dict[str, Any]],
-) -> Tuple[Set[str], Set[str], List[str]]:
+) -> Tuple[Set[str], List[str]]:
     playlist_episode_ids: Set[str] = set()
-    playlist_episode_uris: Set[str] = set()
     finished_episode_uris: List[str] = []
 
     for item in playlist_items:
-        track = extract_track_from_playlist_item(item)
-        if not isinstance(track, dict) or not is_episode_object(track):
+        track = item.get("track") if isinstance(item, dict) else None
+        if not isinstance(track, dict):
+            continue
+
+        if track.get("type") != "episode":
             continue
 
         episode_id = track.get("id")
@@ -256,19 +209,11 @@ def inspect_playlist_episodes(
 
         if episode_id:
             playlist_episode_ids.add(episode_id)
-        if episode_uri:
-            playlist_episode_uris.add(episode_uri)
 
-        if not episode_id or not episode_uri:
-            continue
-
-        details = get_episode_details(sp, episode_id)
-        if details and is_episode_fully_played(details):
+        if episode_uri and is_episode_fully_played(track):
             finished_episode_uris.append(episode_uri)
-            print(f"  Finished in playlist, will remove: {details.get('name', episode_id)}")
 
-    return playlist_episode_ids, playlist_episode_uris, finished_episode_uris
-
+    return playlist_episode_ids, finished_episode_uris
 
 
 def remove_episodes_from_playlist(sp: spotipy.Spotify, playlist_id: str, episode_uris: List[str]) -> None:
@@ -277,11 +222,9 @@ def remove_episodes_from_playlist(sp: spotipy.Spotify, playlist_id: str, episode
 
     unique_uris = list(dict.fromkeys(episode_uris))
     chunk_size = 100
-
     for i in range(0, len(unique_uris), chunk_size):
         chunk = unique_uris[i:i + chunk_size]
         sp.playlist_remove_all_occurrences_of_items(playlist_id, chunk)
-
 
 
 def add_episodes_to_playlist(sp: spotipy.Spotify, playlist_id: str, episode_uris: List[str]) -> None:
@@ -294,20 +237,16 @@ def add_episodes_to_playlist(sp: spotipy.Spotify, playlist_id: str, episode_uris
         sp.playlist_add_items(playlist_id, chunk)
 
 
-
 def choose_episode_to_add(
-    sp: spotipy.Spotify,
     episodes: List[Dict[str, Any]],
     playlist_episode_ids: Set[str],
-    playlist_episode_uris: Set[str],
 ) -> Optional[Dict[str, Any]]:
     sorted_episodes = sorted(
         episodes,
         key=lambda ep: parse_release_date(
             ep.get("release_date", ""),
             ep.get("release_date_precision", "day"),
-        )
-        or date.min,
+        ) or date.min,
         reverse=True,
     )
 
@@ -327,21 +266,17 @@ def choose_episode_to_add(
             print(f"  Ignoring old episode: {episode_name} ({release_date_raw})")
             continue
 
-        if episode_id in playlist_episode_ids or episode_uri in playlist_episode_uris:
-            print(f"  Already in playlist: {episode_name} ({release_date_raw})")
-            continue
-
-        details = get_episode_details(sp, episode_id)
-        source = details if details else episode
-
-        if is_episode_fully_played(source):
+        if is_episode_fully_played(episode):
             print(f"  Already finished: {episode_name} ({release_date_raw})")
             continue
 
-        return source
+        if episode_id in playlist_episode_ids:
+            print(f"  Already in playlist: {episode_name} ({release_date_raw})")
+            continue
+
+        return episode
 
     return None
-
 
 
 def main() -> None:
@@ -354,17 +289,20 @@ def main() -> None:
 
     print("\nReading current playlist...")
     playlist_items = get_playlist_episode_items(sp, PLAYLIST_ID)
-    playlist_episode_ids, playlist_episode_uris, finished_episode_uris = inspect_playlist_episodes(sp, playlist_items)
+    playlist_episode_ids, finished_episode_uris = extract_playlist_episode_ids_and_finished_uris(playlist_items)
 
     if finished_episode_uris:
         print(f"Removing {len(set(finished_episode_uris))} finished episode(s) from playlist...")
         remove_episodes_from_playlist(sp, PLAYLIST_ID, finished_episode_uris)
+
+        removed_ids = {
+            uri.split(":")[-1]
+            for uri in finished_episode_uris
+            if uri.startswith("spotify:episode:")
+        }
+        playlist_episode_ids -= removed_ids
     else:
         print("No finished episodes to remove.")
-
-    print("\nRefreshing playlist after cleanup...")
-    refreshed_playlist_items = get_playlist_episode_items(sp, PLAYLIST_ID)
-    playlist_episode_ids, playlist_episode_uris, _ = inspect_playlist_episodes(sp, refreshed_playlist_items)
 
     new_episode_uris: List[str] = []
     newly_processed_ids: Set[str] = set()
@@ -380,31 +318,21 @@ def main() -> None:
             print("  No episodes returned.")
             continue
 
-        selected_episode = choose_episode_to_add(
-            sp,
-            episodes,
-            playlist_episode_ids,
-            playlist_episode_uris,
-        )
+        selected_episode = choose_episode_to_add(episodes, playlist_episode_ids)
 
         if not selected_episode:
             print("  No eligible episode found for this show.")
             continue
 
-        episode_id = selected_episode.get("id")
-        episode_uri = selected_episode.get("uri")
+        episode_id = selected_episode["id"]
+        episode_uri = selected_episode["uri"]
         episode_name = selected_episode.get("name", "Unknown episode")
         release_date = selected_episode.get("release_date", "unknown")
-
-        if not episode_id or not episode_uri:
-            print("  Selected episode is invalid, skipping.")
-            continue
 
         print(f"  Adding most recent unfinished episode: {episode_name} ({release_date})")
         new_episode_uris.append(episode_uri)
         newly_processed_ids.add(episode_id)
         playlist_episode_ids.add(episode_id)
-        playlist_episode_uris.add(episode_uri)
 
     if new_episode_uris:
         add_episodes_to_playlist(sp, PLAYLIST_ID, new_episode_uris)
