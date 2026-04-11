@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from app.config.logging_config import setup_logging
 from app.config.settings import AppConfig
 from app.integrations.spotify_auth import build_spotify_client
@@ -74,7 +72,7 @@ def build_application() -> Application:
     tray = SunriseCastTray(
         window=window,
         scheduler_service=scheduler,
-        icon_path = resource_path("assets", "icon.ico"),
+        icon_path=str(resource_path("assets", "icon.ico")),
     )
 
     scheduler.set_notifiers(

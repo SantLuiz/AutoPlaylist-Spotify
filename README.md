@@ -82,6 +82,7 @@ PLAYLIST_ID=id_da_playlist
 ```
 
 Esse arquivo é essencial porque o Spotipy suporta autenticação a partir dessas variáveis, e o projeto depende delas para iniciar a sessão com a API do Spotify
+Quando o projeto for empacotado, e importante que o . env esteja no mesmo diretorio do .exe para o programa funcionar corretamente
 
 ### `.spotify_cache`
 Arquivo gerado automaticamente após o primeiro login. Ele armazena o token de acesso em cache para evitar que a autenticação precise ser refeita a cada execução. No SunriseCast, isso é controlado pelo SpotifyOAuth com cache_path=".spotify_cache".
@@ -185,3 +186,44 @@ python run.py
 - Na primeira execução, um navegador será aberto para autenticação no Spotify
 - Após o login, o token será salvo automaticamente em .spotify_cache
 - O script irá sincronizar a playlist conforme as regras definidas no projeto
+
+## 5. Gerando o executável (.exe) no Windows
+
+Para gerar o executável do SunriseCast, utilize o script PowerShell incluído no projeto.
+
+### Pré-requisitos
+
+- Windows
+- Python instalado
+- Ambiente virtual (`venv`) criado
+- Dependências instaladas:
+  pip install -r requirements.txt
+- PyInstaller instalado:
+  pip install pyinstaller
+
+### Executando o build
+
+Na raiz do projeto, execute:
+
+.build_windows.ps1
+
+Caso o PowerShell bloqueie a execução de scripts, utilize:
+
+Set-ExecutionPolicy -Scope Process Bypass .build_windows.ps1
+
+### Saída
+
+Após a execução, o executável estará disponível em:
+
+dist\SunriseCast\SunriseCast.exe
+
+### Observações
+
+- O script realiza automaticamente:
+  - Limpeza de builds anteriores
+  - Ativação do ambiente virtual (se existir)
+  - Inclusão das pastas `assets` e `data`
+  - Uso do arquivo `SunriseCast.spec` para configuração do build
+
+- Sempre teste o executável dentro da pasta `dist` antes de distribuir.
+

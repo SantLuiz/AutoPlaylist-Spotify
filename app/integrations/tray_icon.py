@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 from PySide6.QtGui import QAction, QCloseEvent, QIcon
-from PySide6.QtWidgets import QMenu, QStyle, QSystemTrayIcon
+from PySide6.QtWidgets import QApplication, QMenu, QStyle, QSystemTrayIcon
 
 from app.services.scheduler_service import SchedulerService
 from app.ui.main_window import MainWindow
@@ -109,9 +109,7 @@ class SunriseCastTray:
         self.tray_icon.hide()
         self.window.allow_close()
         self.window.close()
-
-    def should_force_quit(self) -> bool:
-        return self._force_quit
+        QApplication.instance().quit()
 
     def handle_close_event(self, event: QCloseEvent) -> None:
         if self._force_quit:
@@ -140,10 +138,21 @@ class SunriseCastTray:
 
     def _load_icon(self, icon_path: str | None) -> QIcon:
         if icon_path:
-            path = Path(icon_path)
-            if path.exists():
-                return QIcon(str(path))
+            path = Path(icon_path).resolve()
+            logger.info("Trying tray icon path: %s", path)
+
+            if not path.exists():
+                logger.warning("Tray icon file does not exist: %s", path)
+            else:
+                logger.info("Tray icon file exists: %s", path)
+
+                icon = QIcon(str(path))
+                if not icon.isNull():
+                    logger.info("Tray icon loaded successfully: %s", path)
+                    return icon
+
+                logger.warning("Tray icon file exists but Qt could not load it: %s", path)
 
         fallback = self.window.style().standardIcon(QStyle.SP_ComputerIcon)
-        logger.warning("Tray icon file not found; using fallback system icon")
+        logger.warning("Using fallback system icon")
         return fallback
