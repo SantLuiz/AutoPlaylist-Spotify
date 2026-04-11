@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Set
 
@@ -9,6 +10,8 @@ from app.repositories.settings_repository import SettingsRepository
 from app.repositories.state_repository import StateRepository
 from app.services.episode_service import EpisodeService
 from app.services.playlist_service import PlaylistService
+
+logger = logging.getLogger(__name__)
 
 
 class SyncService:
@@ -29,7 +32,7 @@ class SyncService:
         self.playlist_service = playlist_service
 
     def run_sync(self) -> Dict[str, Any]:
-        print("Starting synchronization...")
+        logger.info("Starting synchronization")
 
         settings = self.settings_repository.load()
         state = self.state_repository.load()
@@ -38,19 +41,26 @@ class SyncService:
         processed_episode_ids: Set[str] = set(state.get("processed_episode_ids", []))
         interval_days = getattr(settings, "interval_days", 14)
 
-        print(f"Configured interval_days = {interval_days}")
-        print(f"Loaded {len(podcasts)} podcast(s)")
-        print(f"Loaded {len(processed_episode_ids)} processed episode id(s) from state")
+        logger.info(
+            "Synchronization context loaded | interval_days=%s podcasts=%s processed_ids=%s",
+            interval_days,
+            len(podcasts),
+            len(processed_episode_ids),
+        )
 
         existing_unfinished, removed_count = self.playlist_service.remove_finished_episodes(
             self.playlist_id
         )
         active_playlist_ids = self.playlist_service.extract_episode_ids(existing_unfinished)
 
-        print(f"Removed {removed_count} finished episode(s) from playlist")
-        print(f"{len(existing_unfinished)} unfinished episode(s) remain in playlist")
+        logger.info(
+            "Playlist cleanup finished | removed_finished=%s remaining_unfinished=%s",
+            removed_count,
+            len(existing_unfinished),
+        )
 
         new_candidate_episodes = self._collect_new_candidate_episodes(
+            podcasts=podcasts,
             interval_days=interval_days,
             processed_episode_ids=processed_episode_ids,
             active_playlist_ids=active_playlist_ids,
@@ -61,8 +71,6 @@ class SyncService:
             new_episodes=new_candidate_episodes,
             podcasts=podcasts,
         )
-
-        print(f"Final desired playlist size: {len(desired_episodes)}")
 
         self.playlist_service.sync_playlist_to_order(
             playlist_id=self.playlist_id,
@@ -77,7 +85,12 @@ class SyncService:
             playlist_size=len(desired_episodes),
         )
 
-        print("Synchronization finished successfully.")
+        logger.info(
+            "Synchronization finished successfully | new_found=%s removed_finished=%s final_total=%s",
+            len(new_candidate_episodes),
+            removed_count,
+            len(desired_episodes),
+        )
 
         return {
             "success": True,
@@ -90,41 +103,61 @@ class SyncService:
 
     def _collect_new_candidate_episodes(
         self,
+        podcasts,
         interval_days: int,
         processed_episode_ids: Set[str],
         active_playlist_ids: Set[str],
     ) -> List[Episode]:
-        podcasts = self.podcasts_repository.load()
         new_candidate_episodes: List[Episode] = []
         new_candidate_ids: Set[str] = set()
 
         for podcast in podcasts:
-            print(f"Checking podcast: {podcast.name}")
-
             episodes = self.episode_service.get_recent_unfinished_episodes(
                 podcast=podcast,
                 interval_days=interval_days,
             )
 
-            print(f"  Found {len(episodes)} recent unfinished episode(s)")
+            logger.info(
+                "Podcast checked | name=%s recent_unfinished=%s",
+                podcast.name,
+                len(episodes),
+            )
 
             for episode in episodes:
                 if episode.id in active_playlist_ids:
-                    print(f"  Skipping already active in playlist: {episode.name}")
+                    logger.debug(
+                        "Episode skipped: already active in playlist | episode_id=%s name=%s",
+                        episode.id,
+                        episode.name,
+                    )
                     continue
 
                 if episode.id in new_candidate_ids:
-                    print(f"  Skipping duplicated candidate: {episode.name}")
+                    logger.debug(
+                        "Episode skipped: duplicate candidate | episode_id=%s name=%s",
+                        episode.id,
+                        episode.name,
+                    )
                     continue
 
                 if episode.id in processed_episode_ids:
-                    print(f"  Skipping already processed: {episode.name}")
+                    logger.debug(
+                        "Episode skipped: already processed | episode_id=%s name=%s",
+                        episode.id,
+                        episode.name,
+                    )
                     continue
 
-                print(f"  New candidate: {episode.name}")
                 new_candidate_episodes.append(episode)
                 new_candidate_ids.add(episode.id)
 
+                logger.debug(
+                    "Episode accepted as new candidate | episode_id=%s name=%s",
+                    episode.id,
+                    episode.name,
+                )
+
+        logger.info("New candidate collection finished | total_new_candidates=%s", len(new_candidate_episodes))
         return new_candidate_episodes
 
     def _save_state(
@@ -140,3 +173,10 @@ class SyncService:
             "last_playlist_size": playlist_size,
         }
         self.state_repository.save(new_state)
+
+        logger.info(
+            "Synchronization state saved | processed_ids=%s removed_count=%s playlist_size=%s",
+            len(processed_episode_ids),
+            removed_count,
+            playlist_size,
+        )

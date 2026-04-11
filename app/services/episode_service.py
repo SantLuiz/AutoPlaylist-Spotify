@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
-from typing import Any, List
+import logging
+from datetime import datetime, timedelta
+from typing import List
 
 from app.domain.models import Episode, Podcast
 from app.integrations.spotify_client import SpotifyGateway
+
+logger = logging.getLogger(__name__)
 
 
 class EpisodeService:
@@ -15,97 +18,97 @@ class EpisodeService:
         self,
         podcast: Podcast,
         interval_days: int,
-        fetch_limit: int = 50,
     ) -> List[Episode]:
-        raw_episodes = self.spotify_gateway.get_show_episodes(
-            show_id=podcast.show_id,
-            limit=fetch_limit,
+        logger.debug(
+            "Fetching episodes for podcast | name=%s show_id=%s interval_days=%s",
+            podcast.name,
+            podcast.show_id,
+            interval_days,
         )
 
-        if not raw_episodes:
-            return []
+        cutoff_date = datetime.now() - timedelta(days=interval_days)
 
-        cutoff_date = date.today() - timedelta(days=interval_days)
-        valid_episodes: List[Episode] = []
+        episodes: List[Episode] = []
+        offset = 0
+        limit = 50
 
-        for raw_episode in raw_episodes:
-            episode = self._map_show_episode_to_episode(raw_episode, podcast)
+        while True:
+            raw_items = self.spotify_gateway.get_show_episodes(
+                show_id=podcast.show_id,
+                limit=limit,
+                offset=offset,
+            )
 
-            if episode is None:
-                continue
+            if not raw_items:
+                break
 
-            if not self._is_recent_enough(episode.release_date, cutoff_date):
-                continue
+            for raw in raw_items:
+                episode = self._map_to_episode(raw, podcast)
 
-            if episode.is_finished:
-                continue
+                if episode is None:
+                    continue
 
-            valid_episodes.append(episode)
+                episode_date = self._parse_date(episode.release_date)
+                if episode_date is None:
+                    logger.debug(
+                        "Skipping episode: invalid date | episode_id=%s name=%s",
+                        episode.id,
+                        episode.name,
+                    )
+                    continue
 
-        valid_episodes.sort(
-            key=lambda episode: (episode.release_date, episode.name.lower()),
-            reverse=True,
+                if episode_date < cutoff_date:
+                    # como a API retorna ordenado por mais recente,
+                    # podemos parar cedo
+                    return episodes
+
+                if not episode.is_finished:
+                    episodes.append(episode)
+
+            if len(raw_items) < limit:
+                break
+
+            offset += limit
+
+        logger.debug(
+            "Episodes fetched | podcast=%s count=%s",
+            podcast.name,
+            len(episodes),
         )
 
-        return valid_episodes
+        return episodes
 
-    def _map_show_episode_to_episode(
-        self,
-        raw_episode: dict[str, Any],
-        podcast: Podcast,
-    ) -> Episode | None:
-        if not isinstance(raw_episode, dict):
+    def _map_to_episode(self, raw: dict, podcast: Podcast) -> Episode | None:
+        if not isinstance(raw, dict):
             return None
 
-        episode_id = raw_episode.get("id")
-        episode_uri = raw_episode.get("uri")
-        episode_name = raw_episode.get("name")
-        release_date = raw_episode.get("release_date")
+        episode_id = raw.get("id")
+        episode_uri = raw.get("uri")
+        episode_name = raw.get("name")
+        release_date = raw.get("release_date")
 
         if not episode_id or not episode_uri or not episode_name or not release_date:
             return None
 
-        resume_point = raw_episode.get("resume_point", {})
+        resume_point = raw.get("resume_point", {})
         if not isinstance(resume_point, dict):
             resume_point = {}
 
         is_finished = bool(resume_point.get("fully_played", False))
 
-        show = raw_episode.get("show", {})
-        if not isinstance(show, dict):
-            show = {}
-
-        show_id = show.get("id") or podcast.show_id
-        show_name = show.get("name") or podcast.name
-
         return Episode(
             id=episode_id,
             uri=episode_uri,
             name=episode_name,
-            show_id=show_id,
-            show_name=show_name,
+            show_id=podcast.show_id,
+            show_name=podcast.name,
             release_date=release_date,
             is_finished=is_finished,
         )
 
-    def _is_recent_enough(self, release_date_str: str, cutoff_date: date) -> bool:
-        parsed_release_date = self._parse_release_date(release_date_str)
-        if parsed_release_date is None:
-            return False
-
-        return parsed_release_date >= cutoff_date
-
-    def _parse_release_date(self, value: str) -> date | None:
-        if not value:
+    def _parse_date(self, value: str) -> datetime | None:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d")
+        except Exception:
+            logger.warning("Failed to parse episode date | value=%s", value)
             return None
-
-        formats = ("%Y-%m-%d", "%Y-%m", "%Y")
-
-        for fmt in formats:
-            try:
-                parsed = datetime.strptime(value, fmt)
-                return parsed.date()
-            except ValueError:
-                continue
-
-        return None
