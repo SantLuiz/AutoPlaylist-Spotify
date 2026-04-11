@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
-from typing import Set
+from typing import Callable, Set
 
 from PySide6.QtCore import QTimer
 
 from app.repositories.settings_repository import SettingsRepository
 from app.services.sync_service import SyncService
+
+logger = logging.getLogger(__name__)
 
 
 class SchedulerService:
@@ -19,6 +22,18 @@ class SchedulerService:
 
         self._executed_keys_today: Set[str] = set()
         self._last_day: str = self._today_key()
+
+        self._success_notifier: Callable[[dict], None] | None = None
+        self._error_notifier: Callable[[str], None] | None = None
+
+    def set_notifiers(
+        self,
+        *,
+        success_notifier: Callable[[dict], None] | None = None,
+        error_notifier: Callable[[str], None] | None = None,
+    ) -> None:
+        self._success_notifier = success_notifier
+        self._error_notifier = error_notifier
 
     def start(self) -> None:
         self.timer.start(60_000)
@@ -53,10 +68,18 @@ class SchedulerService:
             return
 
         try:
-            self.sync_service.run_sync()
+            logger.info("Automatic synchronization triggered | execution_key=%s", execution_key)
+            result = self.sync_service.run_sync()
             self._executed_keys_today.add(execution_key)
+
+            if self._success_notifier is not None:
+                self._success_notifier(result)
+
         except Exception as exc:
-            print(f"[Scheduler] Sync failed at {execution_key}: {exc}")
+            logger.error("Automatic synchronization failed | execution_key=%s", execution_key, exc_info=True)
+
+            if self._error_notifier is not None:
+                self._error_notifier(str(exc))
 
     def _normalize_times(self, times: list[str]) -> list[str]:
         normalized: list[str] = []
