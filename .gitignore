@@ -9,6 +9,7 @@ __pycache__/
 # Spotipy
 .spotify_cache
 state.json
+data/
 
 # Distribution / packaging
 .Python
