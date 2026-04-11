@@ -1,5 +1,12 @@
 # SunriseCast
 
+<p align="right">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue" />
+  <img src="https://img.shields.io/badge/Spotify-API-1DB954" />
+  <img src="https://img.shields.io/badge/Spotipy-2.24-yellow" />
+  <img src="https://img.shields.io/badge/Status-Em%20desenvolvimento-orange" />
+</p>
+
 O **SunriseCast** é um projeto de automação em Python criado para manter uma playlist do Spotify sempre organizada e atualizada com episódios recentes dos seus podcasts favoritos.
 
 A proposta do projeto é eliminar a necessidade de gerenciar manualmente episódios de podcasts, automatizando todo o processo de atualização da playlist de forma inteligente e contínua.
