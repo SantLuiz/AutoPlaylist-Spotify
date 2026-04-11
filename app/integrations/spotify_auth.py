@@ -22,6 +22,6 @@ def build_spotify_client(config: AppConfig) -> spotipy.Spotify:
         scope=" ".join(SCOPES),
         open_browser=True,
         cache_path=".spotify_cache",
-        show_dialog=False,
+        show_dialog=True,
     )
     return spotipy.Spotify(auth_manager=auth_manager)

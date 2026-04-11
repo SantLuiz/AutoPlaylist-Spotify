@@ -9,6 +9,9 @@ from app.services.playlist_service import PlaylistService
 from app.services.scheduler_service import SchedulerService
 from app.services.sync_service import SyncService
 from app.ui.main_window import MainWindow
+from app.config.logging_config import setup_logging
+
+setup_logging()
 
 
 class Application:

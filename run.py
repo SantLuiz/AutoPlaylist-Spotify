@@ -1,10 +1,11 @@
 import sys
 from PySide6.QtWidgets import QApplication
-
+from app.config.logging_config import setup_logging
 from app.bootstrap import build_application
 
 
 def main() -> None:
+    setup_logging()
     qt_app = QApplication.instance() or QApplication(sys.argv)
     application = build_application()
     application.run()
