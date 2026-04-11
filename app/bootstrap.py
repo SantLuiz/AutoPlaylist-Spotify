@@ -13,6 +13,7 @@ from app.services.playlist_service import PlaylistService
 from app.services.scheduler_service import SchedulerService
 from app.services.sync_service import SyncService
 from app.ui.main_window import MainWindow
+from app.utils.paths import resource_path
 
 setup_logging()
 
@@ -73,7 +74,7 @@ def build_application() -> Application:
     tray = SunriseCastTray(
         window=window,
         scheduler_service=scheduler,
-        icon_path=str(Path("assets") / "icon.ico"),
+        icon_path = resource_path("assets", "icon.ico"),
     )
 
     scheduler.set_notifiers(
