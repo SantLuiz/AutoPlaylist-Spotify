@@ -43,7 +43,7 @@ O SunriseCast foi projetado com base nos seguintes requisitos principais:
 
 O objetivo do SunriseCast é transformar a forma como você consome podcasts, automatizando a curadoria e organização dos episódios, garantindo que sua playlist esteja sempre atualizada, relevante e pronta para uso.
 
-## 🔐 Autenticação e configuração no Spotify for Developers
+## Autenticação e configuração no Spotify for Developers
 
 Para que o SunriseCast consiga acessar sua conta, ler informações dos podcasts e modificar uma playlist, é necessário configurar uma aplicação no **Spotify for Developers**. Isso acontece porque o Spotify utiliza **OAuth 2.0** para autorizar aplicações a acessarem recursos da conta do usuário, como playlists e biblioteca. :contentReference[oaicite:0]{index=0}
 
@@ -58,7 +58,7 @@ Também é obrigatório cadastrar uma **Redirect URI** nas configurações do ap
 - [Apps / Developer Dashboard](https://developer.spotify.com/documentation/web-api/concepts/apps) :contentReference[oaicite:5]{index=5}
 - [Spotipy Documentation](https://spotipy.readthedocs.io/) :contentReference[oaicite:6]{index=6}
 
-## 📁 Arquivos necessários para a autenticação e execução
+## Arquivos necessários para a autenticação e execução
 
 Como o projeto usa arquivos locais e parte deles não deve ser enviada ao GitHub, alguns arquivos precisam ser criados manualmente no ambiente onde o programa será executado.
 
@@ -85,8 +85,7 @@ Arquivo responsável por definir **quais podcasts serão monitorados** pelo sist
 
 Estrutura:
 
-```
-json
+```json
 {
   "shows": [
     {
@@ -108,7 +107,7 @@ priority: hierarquia deste item em relação aos outros
 ### `state.json`
 Arquivo usado para registrar o estado atual do processamento, permitindo ao sistema controlar episódios já tratados e manter consistência entre execuções.
 
-```
+```json
 {
   "processed_episode_ids": [
     "id_do_episodio_1",
@@ -125,7 +124,7 @@ Arquivo usado para registrar o estado atual do processamento, permitindo ao sist
 ### `settings.json`
 Arquivo usado para registrar prefefências do usuario, alterado pela aplicação
 
-```
+```json
 {
   "auto_sync_enabled": false,
   "interval_days": 7,
@@ -140,7 +139,7 @@ Arquivo usado para registrar prefefências do usuario, alterado pela aplicação
 **Arquivos como .env, .spotify_cache, state.json e conteúdos locais da pasta data/ não devem ser versionados, pois podem expor credenciais, tokens ou estados internos da aplicação. Por isso, eles devem permanecer ignorados pelo Git.**
 
 
-## ▶️ Como executar o projeto
+## Como executar o projeto
 
 Siga os passos abaixo para configurar e rodar o SunriseCast em seu ambiente local.
 
