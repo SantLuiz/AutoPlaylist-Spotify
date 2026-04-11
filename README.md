@@ -52,18 +52,18 @@ O objetivo do SunriseCast é transformar a forma como você consome podcasts, au
 
 ## Autenticação e configuração no Spotify for Developers
 
-Para que o SunriseCast consiga acessar sua conta, ler informações dos podcasts e modificar uma playlist, é necessário configurar uma aplicação no **Spotify for Developers**. Isso acontece porque o Spotify utiliza **OAuth 2.0** para autorizar aplicações a acessarem recursos da conta do usuário, como playlists e biblioteca. :contentReference[oaicite:0]{index=0}
+Para que o SunriseCast consiga acessar sua conta, ler informações dos podcasts e modificar uma playlist, é necessário configurar uma aplicação no **Spotify for Developers**. Isso acontece porque o Spotify utiliza **OAuth 2.0** para autorizar aplicações a acessarem recursos da conta do usuário, como playlists e biblioteca.
 
-A criação dessa aplicação deve ser feita no **Developer Dashboard** do Spotify. Após criar o app e selecionar o uso da **Web API**, você terá acesso ao **Client ID** e ao **Client Secret**, que serão usados pelo projeto durante a autenticação. :contentReference[oaicite:1]{index=1}
+A criação dessa aplicação deve ser feita no **Developer Dashboard** do Spotify. Após criar o app e selecionar o uso da **Web API**, você terá acesso ao **Client ID** e ao **Client Secret**, que serão usados pelo projeto durante a autenticação.
 
-Também é obrigatório cadastrar uma **Redirect URI** nas configurações do app. Essa URI precisa ser exatamente igual à utilizada no código e no arquivo de variáveis de ambiente, pois o Spotify redireciona o usuário para esse endereço após a autorização. :contentReference[oaicite:2]{index=2}
+Também é obrigatório cadastrar uma **Redirect URI** nas configurações do app. Essa URI precisa ser exatamente igual à utilizada no código e no arquivo de variáveis de ambiente, pois o Spotify redireciona o usuário para esse endereço após a autorização.
 
 ### Links úteis
 
-- [Spotify Web API Documentation](https://developer.spotify.com/documentation/web-api/) :contentReference[oaicite:3]{index=3}
-- [Getting Started - Spotify Web API](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) :contentReference[oaicite:4]{index=4}
-- [Apps / Developer Dashboard](https://developer.spotify.com/documentation/web-api/concepts/apps) :contentReference[oaicite:5]{index=5}
-- [Spotipy Documentation](https://spotipy.readthedocs.io/) :contentReference[oaicite:6]{index=6}
+- [Spotify Web API Documentation](https://developer.spotify.com/documentation/web-api/)
+- [Getting Started - Spotify Web API](https://developer.spotify.com/documentation/web-api/tutorials/getting-started)
+- [Apps / Developer Dashboard](https://developer.spotify.com/documentation/web-api/concepts/apps)
+- [Spotipy Documentation](https://spotipy.readthedocs.io/)
 
 ## Arquivos necessários para a autenticação e execução
 
@@ -143,7 +143,7 @@ Arquivo usado para registrar prefefências do usuario, alterado pela aplicação
 
 
 ### **Importante!**
-**Arquivos como .env, .spotify_cache, state.json e conteúdos locais da pasta data/ não devem ser versionados, pois podem expor credenciais, tokens ou estados internos da aplicação. Por isso, eles devem permanecer ignorados pelo Git.**
+**Arquivos como `.env`, `.spotify_cache`, `state.json` e outros conteúdos locais da pasta data/ não devem ser versionados, pois podem expor credenciais, tokens ou estados internos da aplicação. Por isso, eles devem permanecer ignorados pelo Git.**
 
 
 ## Como executar o projeto
